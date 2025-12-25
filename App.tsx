@@ -10,8 +10,31 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<ViewType>('setup');
   const [participants, setParticipants] = useState<Participant[]>([]);
 
+  // State for LuckyDraw persistence
+  const [winners, setWinners] = useState<Participant[]>([]);
+  const [availablePool, setAvailablePool] = useState<Participant[]>([]);
+
+  // State for AutoGrouping persistence
+  const [groups, setGroups] = useState<any[]>([]); // Using any for Group temporarily or import it
+
+  // Initialize pool when participants change, but ONLY if we haven't started drawing yet 
+  // OR if we want to reset. 
+  // Actually, standard behavior: if I change participants, pool should reset?
+  // Let's keep it simple: sync functionality in App or let LuckyDraw handle sync via effect but we pass the state.
+  // Better: Let LuckyDraw manage its internal logic but receive 'initialPool' and 'onWinnersChange'?
+  // No, to persist, 'winners' and 'availablePool' must live here.
+
+  // Sync availablePool with participants ONLY when participants change and we reset?
+  // Or just sync initially.
+  // Simplified approach: When entering LuckyDraw, if pool is empty/mismatched, we might want to sync.
+  // Let's passed shared state to components.
+
   const handleUpdateList = (newList: Participant[]) => {
     setParticipants(newList);
+    // When list changes, we should probably reset the poll or at least ensure new people are added?
+    // For simplicity: reset pool to new list.
+    setAvailablePool(newList);
+    setWinners([]);
   };
 
   const navItems = [
@@ -37,7 +60,7 @@ const App: React.FC = () => {
                 <p className="text-[10px] uppercase tracking-wider font-bold text-slate-400">專業活動管理助手</p>
               </div>
             </div>
-            
+
             <nav className="hidden md:flex gap-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
@@ -45,11 +68,10 @@ const App: React.FC = () => {
                   <button
                     key={item.id}
                     onClick={() => setActiveView(item.id as ViewType)}
-                    className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
-                      activeView === item.id
+                    className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold transition-all ${activeView === item.id
                         ? 'bg-indigo-50 text-indigo-600'
                         : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-                    }`}
+                      }`}
                   >
                     <Icon size={18} />
                     {item.label}
@@ -63,9 +85,6 @@ const App: React.FC = () => {
                 <p className="text-xs text-slate-400 font-medium">目前的清單</p>
                 <p className="text-sm font-bold text-slate-700">{participants.length} 位成員</p>
               </div>
-              <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-indigo-100 hover:text-indigo-600 transition-colors cursor-pointer">
-                <Info size={20} />
-              </div>
             </div>
           </div>
         </div>
@@ -74,14 +93,26 @@ const App: React.FC = () => {
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="animate-in fade-in duration-500">
-          {activeView === 'setup' && (
+          <div style={{ display: activeView === 'setup' ? 'block' : 'none' }}>
             <ListManager participants={participants} onUpdate={handleUpdateList} />
-          )}
+          </div>
           {activeView === 'lucky-draw' && (
-            <LuckyDraw participants={participants} />
+            <LuckyDraw
+              participants={participants}
+              savedWinners={winners}
+              savedPool={availablePool}
+              onSaveState={(newWinners, newPool) => {
+                setWinners(newWinners);
+                setAvailablePool(newPool);
+              }}
+            />
           )}
           {activeView === 'grouping' && (
-            <AutoGrouping participants={participants} />
+            <AutoGrouping
+              participants={participants}
+              savedGroups={groups}
+              onSaveGroups={setGroups}
+            />
           )}
         </div>
       </main>
@@ -95,9 +126,8 @@ const App: React.FC = () => {
               <button
                 key={item.id}
                 onClick={() => setActiveView(item.id as ViewType)}
-                className={`flex flex-col items-center gap-1 transition-all ${
-                  activeView === item.id ? 'text-indigo-600' : 'text-slate-400'
-                }`}
+                className={`flex flex-col items-center gap-1 transition-all ${activeView === item.id ? 'text-indigo-600' : 'text-slate-400'
+                  }`}
               >
                 <Icon size={20} />
                 <span className="text-[10px] font-bold uppercase">{item.label}</span>

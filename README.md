@@ -1,20 +1,68 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# HR Helper (萬用工具箱)
 
-# Run and deploy your AI Studio app
+This is a React application built with Vite, designed to assist with HR tasks.
 
-This contains everything you need to run your app locally.
+## Getting Started
 
-View your app in AI Studio: https://ai.studio/apps/drive/1nSd1ZT0MO1o4oofC0XdBLYo0nh7hoOFs
+### Prerequisites
 
-## Run Locally
+- Node.js (v20 or higher recommended)
+- npm
 
-**Prerequisites:**  Node.js
+### Installation
+
+1. Clone the repository.
+2. Install dependencies:
+
+```bash
+npm install
+```
 
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+
+### Running the Application
+
+Start the development server:
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) (or the port shown in your terminal) to view it in the browser.
+
+### Building for Production
+
+To create a production build:
+
+```bash
+npm run build
+```
+
+The output will be in the `dist` directory.
+
+### Preview Production Build
+
+To preview the production build locally:
+
+```bash
+npm run preview
+```
+
+## Deployment
+
+### GitHub Pages
+
+This project is configured to verify builds on GitHub Actions. To deploy to GitHub Pages:
+
+1. Go to your repository settings on GitHub.
+2. Navigate to **Pages**.
+3. Under **Build and deployment**, select **GitHub Actions** as the source.
+4. The provided workflow `.github/workflows/deploy.yml` will automatically build and deploy `dist/` branch to GitHub Pages on every push to `main`.
+
+## Project Structure
+
+- `src/`: Source code
+  - `components/`: React components
+  - `services/`: API services
+- `public/`: Static assets
+- `vite.config.ts`: Vite configuration

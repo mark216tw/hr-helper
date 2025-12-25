@@ -1,48 +1,48 @@
 
 import React, { useState } from 'react';
-import { Users, Shuffle, LayoutGrid, Palette, Sparkles, Loader2, Download } from 'lucide-react';
+import { Users, Shuffle, LayoutGrid, Loader2, Download } from 'lucide-react';
 import { Participant, Group } from '../types';
-import { generateTeamNames } from '../services/geminiService';
 
 interface AutoGroupingProps {
   participants: Participant[];
+  savedGroups: Group[];
+  onSaveGroups: (groups: Group[]) => void;
 }
 
-const AutoGrouping: React.FC<AutoGroupingProps> = ({ participants }) => {
+const AutoGrouping: React.FC<AutoGroupingProps> = ({ participants, savedGroups, onSaveGroups }) => {
   const [groupSize, setGroupSize] = useState<number>(4);
-  const [groups, setGroups] = useState<Group[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [theme, setTheme] = useState<string>("科技創新");
 
   const performGrouping = async () => {
     if (participants.length === 0) return;
     setIsGenerating(true);
 
+    // Simulate delay for "feeling" of processing
+    await new Promise(resolve => setTimeout(resolve, 800));
+
     const shuffled = [...participants].sort(() => Math.random() - 0.5);
     const result: Group[] = [];
     const numGroups = Math.ceil(shuffled.length / groupSize);
 
-    const names = await generateTeamNames(numGroups, theme);
-
     for (let i = 0; i < numGroups; i++) {
       result.push({
         id: `group-${i}`,
-        name: names[i] || `第 ${i + 1} 組`,
+        name: `第 ${i + 1} 組`,
         members: shuffled.slice(i * groupSize, (i + 1) * groupSize)
       });
     }
 
-    setGroups(result);
+    onSaveGroups(result);
     setIsGenerating(false);
   };
 
   const downloadCSV = () => {
-    if (groups.length === 0) return;
+    if (savedGroups.length === 0) return;
 
     let csvContent = "data:text/csv;charset=utf-8,";
     csvContent += "組別名稱,成員姓名\n";
 
-    groups.forEach(group => {
+    savedGroups.forEach(group => {
       group.members.forEach(member => {
         csvContent += `"${group.name}","${member.name}"\n`;
       });
@@ -66,11 +66,11 @@ const AutoGrouping: React.FC<AutoGroupingProps> = ({ participants }) => {
           </div>
           <div>
             <h2 className="text-2xl font-bold text-slate-800">自動分組</h2>
-            <p className="text-slate-500">立即將成員隨機分配到各組，並生成有趣的小組名稱。</p>
+            <p className="text-slate-500">立即將成員隨機分配到各組。</p>
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 items-end">
+        <div className="grid md:grid-cols-2 gap-6 items-end">
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">每組人數</label>
             <div className="relative">
@@ -81,22 +81,6 @@ const AutoGrouping: React.FC<AutoGroupingProps> = ({ participants }) => {
                 max={participants.length || 100}
                 value={groupSize}
                 onChange={(e) => setGroupSize(parseInt(e.target.value) || 1)}
-                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1">
-              <Sparkles size={14} className="text-amber-500" /> AI 命名主題
-            </label>
-            <div className="relative">
-              <Palette className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input
-                type="text"
-                placeholder="例如：寶石、漫威、咖啡、宇宙..."
-                value={theme}
-                onChange={(e) => setTheme(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
               />
             </div>
@@ -122,7 +106,7 @@ const AutoGrouping: React.FC<AutoGroupingProps> = ({ participants }) => {
         </div>
       </div>
 
-      {groups.length > 0 && (
+      {savedGroups.length > 0 && (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -136,11 +120,11 @@ const AutoGrouping: React.FC<AutoGroupingProps> = ({ participants }) => {
               <Download size={18} /> 下載 CSV 紀錄
             </button>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {groups.map((group, idx) => (
-              <div 
-                key={group.id} 
+            {savedGroups.map((group, idx) => (
+              <div
+                key={group.id}
                 className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:border-indigo-300 transition-colors group animate-in zoom-in duration-300"
                 style={{ animationDelay: `${idx * 50}ms` }}
               >

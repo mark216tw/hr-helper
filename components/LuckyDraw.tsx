@@ -5,19 +5,45 @@ import { Participant } from '../types';
 
 interface LuckyDrawProps {
   participants: Participant[];
+  savedWinners: Participant[];
+  savedPool: Participant[];
+  onSaveState: (winners: Participant[], pool: Participant[]) => void;
 }
 
-const LuckyDraw: React.FC<LuckyDrawProps> = ({ participants }) => {
+const LuckyDraw: React.FC<LuckyDrawProps> = ({ participants, savedWinners, savedPool, onSaveState }) => {
   const [isSpinning, setIsSpinning] = useState(false);
   const [allowDuplicates, setAllowDuplicates] = useState(false);
-  const [winners, setWinners] = useState<Participant[]>([]);
   const [currentDisplay, setCurrentDisplay] = useState<string | null>(null);
-  const [availablePool, setAvailablePool] = useState<Participant[]>(participants);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  // Sync pool when participants change
-  useEffect(() => {
-    setAvailablePool(participants);
-  }, [participants]);
+  // Use local state that reflects props used for persisting
+  // Actually, we can just use the props directly or sync local state with props?
+  // Easier to use local state and call onSaveState whenever it changes.
+
+  // Actually, to make it controlled, we should probably stick to props.
+  // But for simple "save on change", local + effect is ok.
+
+  // Let's rely on props for initial value, but we need to update parent.
+  // Let's use internal state for immediate UI feedback and trigger upstream update.
+
+  // Wait, if we lift state, we should pass "winners" and "setWinners" basically.
+  // But App.tsx passed "savedWinners" and "savedPool" and "onSaveState".
+  // Let's treat "savedWinners" as initial value if we want?
+  // No, if we switch tabs, we want to see the winners.
+
+  // Better:
+  const winners = savedWinners;
+  const availablePool = savedPool.length === 0 && winners.length === 0 && participants.length > 0 ? participants : savedPool;
+  // Edge case: if pool is empty because everyone won, that's valid.
+  // If pool is empty because init, we fill it.
+  // But how to distinguish?
+  // Let's assume if it is literally EMPTY and we have participants, we might need init.
+  // OR we rely on parent to init. 
+  // In App.tsx I added `setAvailablePool(newList)` when list updates. So initial pool should be full.
+
+  const updateState = (newWinners: Participant[], newPool: Participant[]) => {
+    onSaveState(newWinners, newPool);
+  };
 
   const drawWinner = useCallback(() => {
     if (availablePool.length === 0) {
@@ -40,23 +66,25 @@ const LuckyDraw: React.FC<LuckyDrawProps> = ({ participants }) => {
         clearInterval(interval);
         const finalIndex = Math.floor(Math.random() * availablePool.length);
         const winner = availablePool[finalIndex];
-        
-        setWinners(prev => [winner, ...prev]);
-        setCurrentDisplay(winner.name);
-        setIsSpinning(false);
+
+        const newWinners = [winner, ...winners];
+        let newPool = availablePool;
 
         if (!allowDuplicates) {
-          setAvailablePool(prev => prev.filter(p => p.id !== winner.id));
+          newPool = availablePool.filter(p => p.id !== winner.id);
         }
+
+        updateState(newWinners, newPool);
+        setCurrentDisplay(winner.name);
+        setIsSpinning(false);
       }
     }, intervalTime);
-  }, [availablePool, allowDuplicates]);
+  }, [availablePool, allowDuplicates, winners]);
 
   const reset = () => {
     if (window.confirm('確定要重設抽籤結果嗎？')) {
-      setWinners([]);
       setCurrentDisplay(null);
-      setAvailablePool(participants);
+      updateState([], participants);
     }
   };
 
@@ -68,7 +96,7 @@ const LuckyDraw: React.FC<LuckyDrawProps> = ({ participants }) => {
             <Trophy className="text-amber-500" size={48} />
           </div>
         </div>
-        
+
         <h2 className="text-3xl font-bold text-slate-800 mb-2">獎品抽籤</h2>
         <p className="text-slate-500 mb-8">準備好選出幸運得主了嗎？點擊按鈕開始！</p>
 
@@ -81,9 +109,9 @@ const LuckyDraw: React.FC<LuckyDrawProps> = ({ participants }) => {
           </div>
 
           <div className="flex items-center gap-6">
-             <label className="flex items-center gap-2 cursor-pointer group">
-              <input 
-                type="checkbox" 
+            <label className="flex items-center gap-2 cursor-pointer group">
+              <input
+                type="checkbox"
                 className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                 checked={allowDuplicates}
                 onChange={(e) => setAllowDuplicates(e.target.checked)}
@@ -93,10 +121,23 @@ const LuckyDraw: React.FC<LuckyDrawProps> = ({ participants }) => {
               </span>
             </label>
             <button
-              onClick={reset}
-              className="text-slate-400 hover:text-slate-600 text-sm flex items-center gap-1 font-medium transition-colors"
+              onClick={() => {
+                if (showResetConfirm) {
+                  setCurrentDisplay(null);
+                  updateState([], participants);
+                  setShowResetConfirm(false);
+                } else {
+                  setShowResetConfirm(true);
+                  setTimeout(() => setShowResetConfirm(false), 3000);
+                }
+              }}
+              className={`text-sm flex items-center gap-1 font-medium transition-all px-3 py-1.5 rounded-lg ${showResetConfirm
+                ? 'bg-red-100 text-red-600 hover:bg-red-200'
+                : 'text-slate-400 hover:text-slate-600'
+                }`}
             >
-              <RefreshCcw size={16} /> 重置抽籤
+              <RefreshCcw size={16} className={showResetConfirm ? 'animate-spin' : ''} />
+              {showResetConfirm ? '確定重置？' : '重置抽籤'}
             </button>
           </div>
 
@@ -107,7 +148,7 @@ const LuckyDraw: React.FC<LuckyDrawProps> = ({ participants }) => {
           >
             {isSpinning ? '抽獎中...' : '開始抽籤！'}
           </button>
-          
+
           {availablePool.length === 0 && participants.length > 0 && (
             <p className="text-red-500 text-sm font-medium">名單已全數抽出！請重置抽籤池。</p>
           )}
@@ -154,8 +195,8 @@ const LuckyDraw: React.FC<LuckyDrawProps> = ({ participants }) => {
               <span className="font-bold text-slate-800">{participants.length}</span>
             </div>
             <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden mt-2">
-              <div 
-                className="h-full bg-indigo-500 transition-all duration-500" 
+              <div
+                className="h-full bg-indigo-500 transition-all duration-500"
                 style={{ width: `${participants.length > 0 ? (availablePool.length / participants.length) * 100 : 0}%` }}
               />
             </div>

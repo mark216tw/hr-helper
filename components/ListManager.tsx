@@ -10,6 +10,7 @@ interface ListManagerProps {
 
 const ListManager: React.FC<ListManagerProps> = ({ participants, onUpdate }) => {
   const [rawText, setRawText] = useState('');
+  const [confirmCallback, setConfirmCallback] = useState<{ type: 'clear' | 'remove', id: string } | null>(null);
 
   // 偵測重複姓名
   const duplicateNames = useMemo(() => {
@@ -32,7 +33,7 @@ const ListManager: React.FC<ListManagerProps> = ({ participants, onUpdate }) => 
         id: `csv-${Date.now()}-${index}`,
         name: name.split(',')[0].replace(/"/g, '').trim()
       })).filter(p => p.name.length > 0);
-      
+
       onUpdate([...participants, ...newList]);
     };
     reader.readAsText(file);
@@ -71,7 +72,7 @@ const ListManager: React.FC<ListManagerProps> = ({ participants, onUpdate }) => 
 
   const generateMockData = () => {
     const mockNames = [
-      "陳小明", "林美惠", "張大為", "李宜芳", "王家豪", 
+      "陳小明", "林美惠", "張大為", "李宜芳", "王家豪",
       "劉子軒", "蔡淑芬", "楊雅婷", "黃俊傑", "吳志強",
       "郭欣怡", "周杰倫", "徐若瑄", "林志玲", "彭于晏",
       "張惠妹", "蔡依林", "周星馳", "金城武", "梁朝偉",
@@ -93,7 +94,7 @@ const ListManager: React.FC<ListManagerProps> = ({ participants, onUpdate }) => 
               <UserPlus size={20} />
               <h2 className="font-semibold text-lg">手動輸入姓名</h2>
             </div>
-            <button 
+            <button
               onClick={generateMockData}
               className="text-xs flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-1 rounded-md hover:bg-amber-100 transition-colors"
             >
@@ -151,15 +152,27 @@ const ListManager: React.FC<ListManagerProps> = ({ participants, onUpdate }) => 
             )}
             {participants.length > 0 && (
               <button
-                onClick={clearAll}
-                className="text-red-500 hover:text-red-600 text-sm flex items-center gap-1 font-medium"
+                onClick={() => {
+                  if (confirmCallback?.type === 'clear') {
+                    onUpdate([]);
+                    setConfirmCallback(null);
+                  } else {
+                    setConfirmCallback({ type: 'clear', id: 'all' });
+                    setTimeout(() => setConfirmCallback(null), 3000);
+                  }
+                }}
+                className={`text-sm flex items-center gap-1 font-medium transition-all px-3 py-1 rounded-lg ${confirmCallback?.type === 'clear'
+                  ? 'bg-red-600 text-white hover:bg-red-700'
+                  : 'text-red-500 hover:text-red-600 hover:bg-red-50'
+                  }`}
               >
-                <Trash2 size={16} /> 全部清除
+                <Trash2 size={16} />
+                {confirmCallback?.type === 'clear' ? '確定清除？' : '全部清除'}
               </button>
             )}
           </div>
         </div>
-        
+
         {participants.length === 0 ? (
           <div className="text-center py-12 text-slate-400 italic">
             尚未加入任何名單。請由上方輸入或上傳檔案。
@@ -169,19 +182,18 @@ const ListManager: React.FC<ListManagerProps> = ({ participants, onUpdate }) => 
             {participants.map((p) => {
               const isDuplicate = duplicateNames.includes(p.name);
               return (
-                <div 
+                <div
                   key={p.id}
-                  className={`flex items-center justify-between px-3 py-2 border rounded-lg group transition-colors ${
-                    isDuplicate 
-                    ? 'bg-red-50 border-red-200 hover:border-red-400' 
+                  className={`flex items-center justify-between px-3 py-2 border rounded-lg group transition-colors ${isDuplicate
+                    ? 'bg-red-50 border-red-200 hover:border-red-400'
                     : 'bg-slate-50 border-slate-200 hover:border-indigo-200'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-1 min-w-0">
                     <span className="truncate text-sm text-slate-700 font-medium">{p.name}</span>
                     {isDuplicate && <AlertCircle size={12} className="text-red-400 shrink-0" title="重複姓名" />}
                   </div>
-                  <button 
+                  <button
                     onClick={() => removeParticipant(p.id)}
                     className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity ml-1"
                   >
